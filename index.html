@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Farma • Fresh Farm Products, Pure as Medicine</title>
+    <meta name="description" content="Direct farm-to-doorstep delivery marketplace connecting local farmers with consumers for pure A2 milk, organic paneer, high-curcumin turmeric, and same-day harvested greens." />
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              outfit: ['Outfit', 'sans-serif'],
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              emerald: {
+                50: '#E8F5E9',
+                100: '#C8E6C9',
+                600: '#2E7D32',
+                700: '#256629',
+                800: '#1B5E20',
+                900: '#0D380F',
+                950: '#051E07',
+              }
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
