@@ -6,6 +6,9 @@ import FarmDetail from './components/Customer/FarmDetail';
 import CartModal from './components/Customer/CartModal';
 import CheckoutModal from './components/Customer/CheckoutModal';
 import OrderTracking from './components/Customer/OrderTracking';
+import UserProfileModal from './components/Customer/UserProfileModal';
+import WalletModal from './components/Customer/WalletModal';
+import OffersModal from './components/Customer/OffersModal';
 import FarmerDashboard from './components/Farmer/FarmerDashboard';
 import AddProductModal from './components/Farmer/AddProductModal';
 import DeliveryDashboard from './components/Delivery/DeliveryDashboard';
@@ -50,10 +53,13 @@ function App() {
         {/* Dynamic Main Body View */}
         <MainContent />
 
-        {/* Global Modals */}
+        {/* Global Customer & Account Modals */}
         <CartModal />
         <CheckoutModal />
         <OrderTracking />
+        <UserProfileModal />
+        <WalletModal />
+        <OffersModal />
         <AddProductModal />
         <LoginModal />
 

@@ -3,11 +3,36 @@ import { INITIAL_FARMS, INITIAL_PRODUCTS, INITIAL_ORDERS, DEMO_DELIVERY_BOY } fr
 
 const AppContext = createContext();
 
+export const INITIAL_COUPONS = [
+  { code: 'FARMAHEALTH', discount: 50, type: 'flat', minOrder: 200, desc: 'Flat ₹50 OFF on Organic Medicine Produce' },
+  { code: 'PUREA2MILK', discount: 15, type: 'percent', minOrder: 150, desc: '15% OFF Fresh A2 Milk & Dairy' },
+  { code: 'ORGANICSPICE', discount: 20, type: 'percent', minOrder: 100, desc: '20% OFF Lakadong Turmeric & Spices' },
+  { code: 'FRESHGREEN', discount: 29, type: 'flat', minOrder: 99, desc: 'Free Farm Doorstep Delivery' },
+];
+
 export const AppProvider = ({ children }) => {
   // Authentication State
-  const [userRole, setUserRole] = useState(null); // 'customer' | 'farmer' | 'delivery' | null
-  const [user, setUser] = useState(null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true); // Open initially to ask login/register!
+  const [userRole, setUserRole] = useState('customer'); // Default to customer for instant preview, fully switchable
+  const [user, setUser] = useState({
+    id: 'user-1',
+    name: 'Sanjana Rao',
+    email: 'sanjana.rao@example.com',
+    phone: '+91 98765 43210',
+    address: 'Flat 402, Lotus Heights, Green Avenue, Jubilee Hills, Hyderabad',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200',
+    role: 'customer',
+    walletBalance: 500, // ₹500 initial FarmaWallet credit
+    healthPoints: 120,   // Organic Health Points
+    savedAddresses: [
+      { id: 'addr-1', label: 'Home', text: 'Flat 402, Lotus Heights, Green Avenue, Hyderabad' },
+      { id: 'addr-2', label: 'Office', text: 'Plot 12, Bio-Tech Park, Gachibowli, Hyderabad' },
+    ]
+  });
+
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isOffersModalOpen, setIsOffersModalOpen] = useState(false);
 
   // App Data States
   const [farms, setFarms] = useState(INITIAL_FARMS);
@@ -15,6 +40,14 @@ export const AppProvider = ({ children }) => {
   const [orders, setOrders] = useState(INITIAL_ORDERS);
   const [cart, setCart] = useState([]);
   const [activeFarmId, setActiveFarmId] = useState(null);
+
+  // Coupons & Wallet State
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [walletTransactions, setWalletTransactions] = useState([
+    { id: 'tx-1', type: 'credit', amount: 500, desc: 'Welcome Bonus Credited', date: 'Today' },
+    { id: 'tx-2', type: 'debit', amount: 319, desc: 'Paid for Order #FRM-88910', date: 'Today' },
+    { id: 'tx-3', type: 'credit', amount: 50, desc: 'Organic Health Cashback', date: 'Yesterday' },
+  ]);
 
   // Delivery partner state
   const [deliveryBoy, setDeliveryBoy] = useState(DEMO_DELIVERY_BOY);
@@ -42,7 +75,102 @@ export const AppProvider = ({ children }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Register New User Handler for Customer, Farmer, or Delivery
+  // User Profile Update
+  const updateUserProfile = (updatedFields) => {
+    setUser(prev => ({ ...prev, ...updatedFields }));
+    addToast('Profile details updated successfully!', 'success');
+  };
+
+  // FarmaWallet Operations
+  const addWalletMoney = (amount) => {
+    const numAmt = parseFloat(amount);
+    if (!numAmt || numAmt <= 0) return;
+
+    setUser(prev => ({ ...prev, walletBalance: prev.walletBalance + numAmt }));
+    setWalletTransactions(prev => [
+      { id: `tx-${Date.now()}`, type: 'credit', amount: numAmt, desc: 'Wallet Top-Up', date: 'Just now' },
+      ...prev
+    ]);
+    addToast(`Added ₹${numAmt} to your FarmaWallet!`, 'success');
+  };
+
+  // Coupon Operations
+  const applyCouponCode = (code, orderSubtotal) => {
+    const coupon = INITIAL_COUPONS.find(c => c.code.toUpperCase() === code.toUpperCase());
+    if (!coupon) {
+      addToast('Invalid coupon code.', 'error');
+      return false;
+    }
+
+    if (orderSubtotal < coupon.minOrder) {
+      addToast(`Coupon requires a minimum order of ₹${coupon.minOrder}`, 'error');
+      return false;
+    }
+
+    let calculatedDiscount = 0;
+    if (coupon.type === 'flat') {
+      calculatedDiscount = coupon.discount;
+    } else {
+      calculatedDiscount = Math.round((orderSubtotal * coupon.discount) / 100);
+    }
+
+    setAppliedCoupon({ ...coupon, calculatedDiscount });
+    addToast(`🎉 Coupon "${coupon.code}" applied! Saved ₹${calculatedDiscount}`, 'success');
+    return true;
+  };
+
+  const removeAppliedCoupon = () => {
+    setAppliedCoupon(null);
+    addToast('Coupon removed.');
+  };
+
+  // Login Handler
+  const loginUser = (role, customUserData = {}) => {
+    setUserRole(role);
+    
+    if (role === 'farmer') {
+      const farmerObj = {
+        id: 'farm-owner-1',
+        name: customUserData.name || 'Ramesh Patel',
+        email: customUserData.email || 'ramesh.patel@aaravfarms.com',
+        phone: '+91 98765 43210',
+        role: 'farmer',
+        farmId: 'farm-1',
+        farmName: 'Aarav Organic Vedic Dairy & Farms',
+        walletBalance: 4850,
+      };
+      setUser(farmerObj);
+      addToast(`Logged in as Farmer (${farmerObj.name}).`, 'info');
+    } else if (role === 'delivery') {
+      const driverObj = {
+        id: deliveryBoy.id,
+        name: customUserData.name || deliveryBoy.name,
+        email: customUserData.email || deliveryBoy.email,
+        phone: deliveryBoy.phone,
+        role: 'delivery',
+        license: deliveryBoy.licenseNumber,
+        walletBalance: 840,
+      };
+      setUser(driverObj);
+      addToast(`Logged in as Delivery Partner (${driverObj.name}).`, 'info');
+    } else {
+      const customerObj = {
+        id: 'user-1',
+        name: customUserData.name || 'Sanjana Rao',
+        email: customUserData.email || 'sanjana.rao@example.com',
+        phone: '+91 98765 43210',
+        address: 'Flat 402, Lotus Heights, Green Avenue, Hyderabad',
+        role: 'customer',
+        walletBalance: 500,
+        healthPoints: 120,
+      };
+      setUser(customerObj);
+      addToast(`Logged in as Customer (${customerObj.name}).`, 'info');
+    }
+
+    setIsLoginModalOpen(false);
+  };
+
   const registerUser = (role, data) => {
     setUserRole(role);
 
@@ -50,17 +178,17 @@ export const AppProvider = ({ children }) => {
       const newFarmId = `farm-${Date.now()}`;
       const newFarm = {
         id: newFarmId,
-        name: data.farmName || 'My Fresh Organic Farm',
+        name: data.farmName || 'My Organic Farm',
         farmerName: data.name || 'Farmer Owner',
         phone: data.phone || '+91 98765 43210',
-        location: data.location || 'Green Valley Acres, Sector 5',
+        location: data.location || 'Green Acres Bio Zone',
         distance: '1.5 km away',
         rating: 5.0,
         reviewsCount: 1,
         organicCertified: true,
         certNumber: data.certNumber || `ORG-IND-${Math.floor(1000 + Math.random() * 9000)}`,
-        specialty: data.specialty || 'Fresh Dairy, Spices & Leafy Vegetables',
-        motiveNote: data.motiveNote || 'Pure organic harvest — farm fresh products as medicine.',
+        specialty: data.specialty || 'Fresh Dairy, Spices & Organic Greens',
+        motiveNote: 'Pure organic harvest — farm fresh products as medicine.',
         image: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30?auto=format&fit=crop&q=80&w=800',
         banner: 'https://images.unsplash.com/photo-1595855759920-86582396756a?auto=format&fit=crop&q=80&w=1200',
         deliveryTime: '20-30 mins',
@@ -72,13 +200,15 @@ export const AppProvider = ({ children }) => {
         id: `farmer-${Date.now()}`,
         name: data.name,
         email: data.email,
+        phone: data.phone,
         role: 'farmer',
         farmId: newFarmId,
         farmName: newFarm.name,
+        walletBalance: 0,
       };
 
       setUser(farmerObj);
-      addToast(`🎉 Welcome ${data.name}! Your Farm "${newFarm.name}" is registered & live on Farma!`, 'success');
+      addToast(`🎉 Welcome ${data.name}! Farm "${newFarm.name}" registered!`, 'success');
     } else if (role === 'delivery') {
       const updatedDriver = {
         id: `del-${Date.now()}`,
@@ -101,74 +231,38 @@ export const AppProvider = ({ children }) => {
         id: updatedDriver.id,
         name: updatedDriver.name,
         email: updatedDriver.email,
+        phone: updatedDriver.phone,
         role: 'delivery',
         license: updatedDriver.licenseNumber,
+        walletBalance: 0,
       });
 
-      addToast(`🎉 Welcome Driver ${data.name}! Driving License verified & logged in!`, 'success');
+      addToast(`🎉 Welcome Driver ${data.name}! License verified!`, 'success');
     } else {
       const customerObj = {
         id: `cust-${Date.now()}`,
         name: data.name,
         email: data.email,
         phone: data.phone || '+91 98765 43210',
-        address: data.address || 'Flat 402, Lotus Heights, Green Avenue, Hyderabad',
+        address: data.address || 'Flat 402, Lotus Heights, Hyderabad',
         role: 'customer',
+        walletBalance: 500,
+        healthPoints: 50,
       };
 
       setUser(customerObj);
-      addToast(`🎉 Registration successful! Welcome to Farma, ${data.name}!`, 'success');
+      addToast(`🎉 Registration successful! Welcome, ${data.name}!`, 'success');
     }
 
     setIsLoginModalOpen(false);
   };
 
-  // Existing Login Handler
-  const loginUser = (role, customUserData = {}) => {
-    setUserRole(role);
-    
-    if (role === 'farmer') {
-      const farmerObj = {
-        id: 'farm-owner-1',
-        name: customUserData.name || 'Ramesh Patel',
-        email: customUserData.email || 'ramesh.patel@aaravfarms.com',
-        role: 'farmer',
-        farmId: 'farm-1',
-        farmName: 'Aarav Organic Vedic Dairy & Farms',
-      };
-      setUser(farmerObj);
-      addToast(`Logged in as Farmer (${farmerObj.name}).`, 'info');
-    } else if (role === 'delivery') {
-      const driverObj = {
-        id: deliveryBoy.id,
-        name: customUserData.name || deliveryBoy.name,
-        email: customUserData.email || deliveryBoy.email,
-        role: 'delivery',
-        license: deliveryBoy.licenseNumber,
-      };
-      setUser(driverObj);
-      addToast(`Logged in as Delivery Partner (${driverObj.name}).`, 'info');
-    } else {
-      const customerObj = {
-        id: 'user-1',
-        name: customUserData.name || 'Sanjana Rao',
-        email: customUserData.email || 'sanjana@example.com',
-        role: 'customer',
-      };
-      setUser(customerObj);
-      addToast(`Logged in as Customer (${customerObj.name}).`, 'info');
-    }
-
-    setIsLoginModalOpen(false);
-  };
-
-  // Logout Handler
   const logoutUser = () => {
     setUserRole(null);
     setUser(null);
     setCart([]);
     setIsLoginModalOpen(true);
-    addToast('Logged out. Select a role or create an account to proceed.', 'info');
+    addToast('Logged out. Select a role to proceed.', 'info');
   };
 
   // Cart operations
@@ -184,7 +278,7 @@ export const AppProvider = ({ children }) => {
       }
       setCart([{ ...product, quantity }]);
       setActiveFarmId(product.farmId);
-      addToast(`Cart cleared & added ${product.name} from ${product.farmName}!`);
+      addToast(`Cart cleared & added ${product.name}!`);
       return;
     }
 
@@ -224,6 +318,7 @@ export const AppProvider = ({ children }) => {
   const clearCart = () => {
     setCart([]);
     setActiveFarmId(null);
+    setAppliedCoupon(null);
   };
 
   // Product Management (Farmer Action)
@@ -241,7 +336,7 @@ export const AppProvider = ({ children }) => {
     };
 
     setProducts(prev => [newProd, ...prev]);
-    addToast(`Successfully added product "${newProd.name}" to your farm store!`);
+    addToast(`Added "${newProd.name}" to farm store!`);
   };
 
   const toggleProductAvailability = (productId) => {
@@ -254,15 +349,34 @@ export const AppProvider = ({ children }) => {
     addToast('Product removed from store.');
   };
 
-  // Order Placement
+  // Order Placement (with FarmaWallet option & Health Points reward)
   const placeOrder = (orderData) => {
     const farmObj = farms.find(f => f.id === orderData.farmId) || farms[0];
+    
+    // Deduct from FarmaWallet if paid via Wallet
+    if (orderData.paymentMethod.includes('Wallet')) {
+      if (user.walletBalance < orderData.grandTotal) {
+        addToast('Insufficient FarmaWallet balance. Please top-up or choose another method.', 'error');
+        return false;
+      }
+
+      setUser(prev => ({ ...prev, walletBalance: prev.walletBalance - orderData.grandTotal }));
+      setWalletTransactions(prev => [
+        { id: `tx-${Date.now()}`, type: 'debit', amount: orderData.grandTotal, desc: `Payment for Order #${orderData.id || 'NEW'}`, date: 'Just now' },
+        ...prev
+      ]);
+    }
+
+    // Award Health Points (1 Point per ₹10 spent)
+    const earnedPoints = Math.floor(orderData.grandTotal / 10);
+    setUser(prev => ({ ...prev, healthPoints: (prev.healthPoints || 0) + earnedPoints }));
+
     const newOrder = {
       id: `FRM-${Math.floor(10000 + Math.random() * 90000)}`,
       customerId: user ? user.id : 'cust-1',
       customerName: user ? user.name : 'Sanjana Rao',
-      customerPhone: orderData.phone || '+91 98765 43210',
-      deliveryAddress: orderData.address,
+      customerPhone: orderData.phone || user?.phone || '+91 98765 43210',
+      deliveryAddress: orderData.address || user?.address,
       farmId: farmObj.id,
       farmName: farmObj.name,
       farmLocation: farmObj.location,
@@ -301,7 +415,8 @@ export const AppProvider = ({ children }) => {
     clearCart();
     setIsCheckoutOpen(false);
     setIsOrderTrackingOpen(true);
-    addToast('🎉 Order placed successfully! Live delivery tracking active.', 'success');
+    addToast(`🎉 Order placed! You earned +${earnedPoints} Farma Health Points!`, 'success');
+    return true;
   };
 
   const updateOrderStatus = (orderId, newStatus) => {
@@ -333,9 +448,17 @@ export const AppProvider = ({ children }) => {
       setUserRole,
       user,
       setUser,
+      updateUserProfile,
       loginUser,
       registerUser,
       logoutUser,
+      // Wallet & Rewards
+      addWalletMoney,
+      walletTransactions,
+      appliedCoupon,
+      applyCouponCode,
+      removeAppliedCoupon,
+      // Data
       farms,
       setFarms,
       products,
@@ -366,6 +489,12 @@ export const AppProvider = ({ children }) => {
       setIsAddProductOpen,
       isLoginModalOpen,
       setIsLoginModalOpen,
+      isProfileModalOpen,
+      setIsProfileModalOpen,
+      isWalletModalOpen,
+      setIsWalletModalOpen,
+      isOffersModalOpen,
+      setIsOffersModalOpen,
       isOrderTrackingOpen,
       setIsOrderTrackingOpen,
       trackingOrderId,
